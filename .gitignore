@@ -3,3 +3,13 @@ gen
 .DS_Store
 db/postgres_env
 *~
+output_dir*
+crawler/adblockplus
+crawler/list*.txt
+crawler/creds*.json
+crawl-cluster/cli/package-lock.json
+crawl-cluster/cli/package-lock.json
+chrome-*
+firefox-*
+junk*
+extensions*

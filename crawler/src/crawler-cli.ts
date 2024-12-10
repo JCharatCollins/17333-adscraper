@@ -30,12 +30,12 @@ const optionsDefinitions: commandLineUsage.OptionDefinition[] = [
     description: 'Name of this crawl (optional).',
     group: 'main',
   },
-  // {
-  //   name: 'crawl_id',
-  //   type: Number,
-  //   description: 'If resuming a previous crawl, the id of the previous crawl (Optional).',
-  //   group: 'main'
-  // },
+  {
+    name: 'crawl_id',
+    type: Number,
+    description: 'If resuming a previous crawl, the id of the previous crawl (Optional).',
+    group: 'main'
+  },
   {
     name: 'job_id',
     alias: 'j',
@@ -120,29 +120,41 @@ const optionsDefinitions: commandLineUsage.OptionDefinition[] = [
     group: 'pg'
   },
   {
+    name: 'browser',
+    type: String,
+    description: 'Which browser Puppeteer should run. Either "chrome" or "firefox".',
+    group: 'browserOptions'
+  },
+  {
     name: 'headless',
     type: String,
     description: 'Which Puppeteer headless mode the crawler should run in. Either "true", "false", or "shell" (default: "true")',
     defaultValue: "true",
-    group: 'chromeOptions',
+    group: 'browserOptions',
   },
   {
     name: 'profile_dir',
     type: String,
     description: 'Directory of the profile (user data directory) that Puppeteer should use for this crawl (Optional). Provide this if you want a profile that can be reused between crawls. If not provided (for stateless crawls), uses a new, empty profile.',
-    group: 'chromeOptions'
+    group: 'browserOptions'
   },
   {
     name: 'executable_path',
     type: String,
-    description: 'Path to the Chrome executable to use for this crawl (Optional). If not provided, uses the default Puppeteer executable.',
-    group: 'chromeOptions'
+    description: 'Path to the browser executable to use for this crawl (Optional). If not provided, uses the default Puppeteer executable.',
+    group: 'browserOptions'
   },
   {
     name: 'proxy_server',
     type: String,
-    description: 'Proxy server that all Chrome traffic should pass through (Optional). This value is passed directly to Chrome\'s --proxy_server flag.',
-    group: 'chromeOptions'
+    description: 'Chrome only. Proxy server that all Chrome traffic should pass through (Optional). This value is passed directly to Chrome\'s --proxy_server flag.',
+    group: 'browserOptions'
+  },
+  {
+    name: 'extension_path',
+    type: String,
+    description: 'Path to an extension that will be marked as allowed and will attempt to be installed upon browser launch. On Firefox, extension may have to be manually loaded after.',
+    group: 'browserOptions'
   },
   {
     name: 'shuffle_crawl_list',
@@ -191,7 +203,7 @@ const optionsDefinitions: commandLineUsage.OptionDefinition[] = [
   {
     name: 'click_ads',
     type: String,
-    description: 'Specify whether to click on ads. Must be one of: noClick, clickAndBlockLoad, or clickAndScrapeLandingPage. If noClick, no ads will be clicked. If "clickAndBlockLoad", the ads will be clicked, but prevented from loading, and the initial URL of the ad will be stored in the database. If "clickAdAndScrapeLandingPage", ads will be clicked, and the landing page content will be scraped. The --scrape_ads arg must also be used. Default: "noClick"',
+    description: 'Specify whether to click on ads. Must be one of: noClick, clickAndBlockLoad, or clickAndScrapeLandingPage. On Firefox, only noClick is supported. If noClick, no ads will be clicked. If "clickAndBlockLoad", the ads will be clicked, but prevented from loading, and the initial URL of the ad will be stored in the database. If "clickAdAndScrapeLandingPage", ads will be clicked, and the landing page content will be scraped. The --scrape_ads arg must also be used. Default: "noClick"',
     defaultValue: 'noClick',
     group: 'scrapeOptions'
   },
@@ -227,7 +239,7 @@ const usage = [
   },{
     header: 'Puppeteer Options',
     optionList: optionsDefinitions,
-    group: 'chromeOptions'
+    group: 'browserOptions'
   },
   {
     header: 'Crawl Options',
@@ -249,6 +261,14 @@ if (options.help) {
 if ((!!options.crawl_list ? 1 : 0) + (!!options.ad_url_crawl_list ? 1 : 0) + (!!options.url ? 1 : 0) != 1) {
   console.log('Must specify input using exactly one of --crawl_list, --ad_url_crawl_list, or --url');
   console.log('Run "node gen/crawler-cli.js --help" to view usage guide');
+  process.exit(1);
+}
+
+if (!options.browser) {
+  console.log('Missing required parameter: --browser');
+  process.exit(1);
+} else if (options.browser != 'chrome' && options.browser != 'firefox') {
+  console.log('Parameter --browser is not one of "firefox" or "chrome".');
   process.exit(1);
 }
 
@@ -331,11 +351,13 @@ if (options.pg_conf_file && fs.existsSync(options.pg_conf_file)) {
       adUrlList: options.ad_url_crawl_list,
       logLevel: logLevel,
 
-      chromeOptions: {
+      browserOptions: {
+        browser: options.browser,
         headless: headless,
         profileDir: options.profile_dir,
         executablePath: options.executable_path,
-        proxyServer: options.proxy_server
+        proxyServer: options.proxy_server,
+        extensionPath: options.extension_path
       },
 
       crawlOptions: {

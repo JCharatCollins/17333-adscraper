@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { ClientConfig } from 'pg';
 import { publicIpv4, publicIpv6 } from 'public-ip';
-import { Browser, HTTPRequest, Page } from 'puppeteer';
+import puppeteer, { Browser, HTTPRequest, Page, SupportedBrowser } from 'puppeteer';
 import puppeteerExtra from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import sourceMapSupport from 'source-map-support';
@@ -32,11 +32,13 @@ export interface CrawlerFlags {
   adUrlList?: string,
   logLevel?: log.LogLevel,
 
-  chromeOptions: {
+  browserOptions: {
+    browser: SupportedBrowser,
     profileDir?: string,
     headless: boolean,
     executablePath?: string,
-    proxyServer?: string
+    proxyServer?: string,
+    extensionPath?: string
   }
 
   crawlOptions: {
@@ -219,7 +221,7 @@ export async function crawl(flags: CrawlerFlags, pgConf: ClientConfig, checkpoin
         crawl_list_length: crawlList.length,
         last_checkpoint_index: flags.crawlOptions.checkpointFreqSeconds ? 0 : undefined,
         profile_id: FLAGS.profileId,
-        profile_dir: FLAGS.chromeOptions.profileDir,
+        profile_dir: FLAGS.browserOptions.profileDir,
         crawler_hostname: os.hostname(),
         crawler_ip: await getPublicIp()
       }
@@ -628,7 +630,7 @@ async function scrollDownPage(page: Page) {
     let yloc = randrange(50, 100);
 
     // Scroll a random amount
-    let ydelta = randrange(200, 400);
+    let ydelta = Math.floor(randrange(200, 400));
     // puppeteer provides current mouse position to wheel mouse event
     await page.mouse.move(xloc, yloc);
     await page.mouse.wheel({ deltaY: ydelta });
@@ -647,21 +649,53 @@ async function scrollDownPage(page: Page) {
 // (e.g. within the checkpoint function).
 export async function launchBrowser(flags: CrawlerFlags) {
   log.info('Launching browser...');
-  puppeteerExtra.default.use(StealthPlugin())
-  let chromeArgs: string[] = ['--disable-dev-shm-usage'];
-  if (flags.chromeOptions.proxyServer) {
-    chromeArgs.push(`--proxy-server=${flags.chromeOptions.proxyServer}`);
+  let browserArgs: string[] = [
+    '--disable-dev-shm-usage'
+  ]
+
+  // let chromeArgs: string[] = [
+  // '--disable-dev-shm-usage', 
+  // '--disable-extensions-except=~/CMU/17333-adscraper/crawler/adblockplus',
+  // '--load-extension=~/CMU/17333-adscraper/crawler/adblockplus/'
+  // '--disable-extensions-except=~/CMU/17333-adscraper/extensions/uBOLite_2024.12.2.22.chromium.mv3',
+  // '--load-extension=~/CMU/17333-adscraper/extensions/uBOLite_2024.12.2.22.chromium.mv3'
+  // ];
+  if (flags.browserOptions.extensionPath) {
+    browserArgs.push('--disable-extensions-except=' + flags.browserOptions.extensionPath)
+    browserArgs.push('--load-extension=' + flags.browserOptions.extensionPath)
   }
+  // let firefoxArgs: string[] = [
+  // '--disable-dev-shm-usage',
+  // '--disable-extensions-except=~/CMU/17333-adscraper/crawler/uBlock0_1.61.2.firefox.signed.xpi',
+  // '--disable-extensions-except=~/CMU/17333-adscraper/crawler/adblock_plus-4.9.3.xpi',
+  // '--load-extension=~/CMU/17333-adscraper/crawler/adblockplus/uBlock0_1.61.2.firefox.signed.xpi'
+  // ];
+    if (flags.browserOptions.proxyServer) {
+      browserArgs.push(`--proxy-server=${flags.browserOptions.proxyServer}`);
+  }
+  const keypress = async () => {
+    process.stdin.setRawMode(true)
+    return new Promise(resolve => process.stdin.once('data', () => {
+      process.stdin.setRawMode(false)
+      resolve(null)
+    }))
+  }
+
   let browser = await puppeteerExtra.default.launch({
-    args: chromeArgs,
+    browser: flags.browserOptions.browser,
+    args: browserArgs,
     defaultViewport: VIEWPORT,
-    headless: flags.chromeOptions.headless,
+    headless: false,
     handleSIGINT: false,
-    userDataDir: flags.chromeOptions.profileDir,
-    executablePath: flags.chromeOptions.executablePath
+    userDataDir: flags.browserOptions.profileDir,
+    executablePath: flags.browserOptions.executablePath
   });
+  log.info("Browser launched.");
   const version = await browser.version();
   log.info('Running ' + version);
+  log.info("Waiting for manual extension install...")
+  await keypress()
+  log.info("Continuining crawl.")
   return browser;
 }
 
