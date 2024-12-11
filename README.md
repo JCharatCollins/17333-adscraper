@@ -191,6 +191,7 @@ we can add the `--scrape_site` option.
 
 ```sh
 node gen/crawler-cli.js \
+    --browser chrome \
     --name example_crawl_name \
     --output_dir /path/to/your/output/dir \
     --crawl_list /path/to/your/crawl/list \
@@ -258,6 +259,7 @@ gets the URLs of the ads without loading them.
 
 ```sh
 node gen/crawler-cli.js \
+    --browser chrome \
     --name ad_crawl \
     --profile_dir /path/to/ad_scraping/profile
     --output_dir /path/to/your/output/dir \
@@ -285,6 +287,7 @@ instead of `--crawl_list`.
 
 ```sh
 node gen/crawler-cli.js \
+    --browser chrome \
     --name example_crawl_name \
     --profile_dir /path/to/landing_page_scraping/profile
     --output_dir /path/to/your/output/dir \
@@ -310,6 +313,7 @@ SELECT * FROM crawl;
 
 ```sh
 node gen/crawler-cli.js \
+    --browser chrome \
     --crawl_id 24
     --name example_crawl_name \
     --output_dir /path/to/your/output/dir \
