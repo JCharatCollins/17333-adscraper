@@ -172,6 +172,7 @@ a list of URLs, using the `--scrape_ads` options.
 
 ```sh
 node gen/crawler-cli.js \
+    --browser chrome \
     --name example_crawl_name \
     --output_dir /path/to/your/output/dir \
     --crawl_list /path/to/your/crawl/list \
